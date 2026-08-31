@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviation Travel Experience Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+</head>
+
+<body>
+    <div class="container d-flex justify-content-center py-5">
+        <div class="card w-100" style="max-width:720px;">
+            <div class="card-header bg-primary text-white fs-5">
+                ✈️ Aviation Travel Experience Platform
+            </div>
+            <div class="card-body">
+
+                <div class="mb-3">
+                    <label for="endpoint" class="form-label fw-semibold">Service</label>
+                    <select id="endpoint" class="form-select" onchange="updatePlaceholder()">
+                        <option value="/api/chat/passenger">
+                            🧳 Passenger Support — booking, check-in, baggage, upgrades (Claude 3.5 Sonnet)
+                        </option>
+                        <option value="/api/chat/operations">
+                            🛫 Flight Operations — status, disruptions, rebooking (Claude 3.5 Haiku)
+                        </option>
+                        <option value="/api/chat/personalize">
+                            🌟 Travel Personalization — loyalty, lounge access, perks (Amazon Nova Pro)
+                        </option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="question" class="form-label fw-semibold">Your Question</label>
+                    <input type="text" id="question" class="form-control"
+                        placeholder="How can I use the United Airlines app to check in and track my baggage?"
+                        required autofocus>
+                </div>
+
+                <div class="d-grid mb-3">
+                    <button onclick="askQuestion()" id="submitButton" class="btn btn-primary">Send</button>
+                </div>
+
+                <div id="loading" class="mt-3 text-center text-muted visually-hidden">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    Processing your request...
+                </div>
+                <div id="error" class="alert alert-danger mt-3 d-none"></div>
+                <div id="answer" class="mt-3 text-muted"
+                    style="max-height:500px; overflow-y:auto;">Response will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+    <script>
+        const placeholders = {
+            '/api/chat/passenger':  'How can I use the United Airlines app to check in, choose my seat, and track my baggage in real time?',
+            '/api/chat/operations': 'My flight was cancelled due to weather. What are my options for rebooking and compensation?',
+            '/api/chat/personalize': 'As a MileagePlus Premier Gold member flying to London, what lounge access and upgrade benefits am I eligible for?'
+        };
+
+        const questionInput  = document.getElementById('question');
+        const endpointSelect = document.getElementById('endpoint');
+        const submitButton   = document.getElementById('submitButton');
+        const loadingDiv     = document.getElementById('loading');
+        const errorDiv       = document.getElementById('error');
+        const answerDiv      = document.getElementById('answer');
+
+        function updatePlaceholder() {
+            questionInput.placeholder = placeholders[endpointSelect.value];
+        }
+
+        async function askQuestion() {
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            submitButton.disabled = true;
+            loadingDiv.classList.remove('visually-hidden');
+            errorDiv.classList.add('d-none');
+            answerDiv.innerText = '';
+            answerDiv.classList.remove('text-muted');
+
+            try {
+                const url = endpointSelect.value + '?userPrompt=' + encodeURIComponent(question);
+                const response = await fetch(url, { method: 'GET' });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ` + await response.text());
+                }
+
+                const text = await response.text();
+                if (text) {
+                    const escaped = text
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+                    answerDiv.innerHTML =
+                        `<div class="alert alert-light p-3" style="white-space:pre-wrap;">${escaped}</div>`;
+                } else {
+                    answerDiv.innerText = 'No response received from the server.';
+                }
+            } catch (error) {
+                console.error(error);
+                errorDiv.innerText = 'An error occurred: ' + error.message;
+                errorDiv.classList.remove('d-none');
+            } finally {
+                submitButton.disabled = false;
+                loadingDiv.classList.add('visually-hidden');
+            }
+        }
+
+        // Allow pressing Enter to submit
+        questionInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') askQuestion();
+        });
+    </script>
+</body>
+
+</html>
